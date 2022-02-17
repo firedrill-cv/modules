@@ -1,3 +1,2 @@
 urllib3
-jq
 boto3

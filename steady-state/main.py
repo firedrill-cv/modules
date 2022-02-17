@@ -1,7 +1,6 @@
 import json
 from time import sleep
 import urllib3
-import jq
 import boto3
 import os
 
@@ -49,7 +48,7 @@ def start_http_check(steady_state):
     if "expected_status" in response_config:
         expected_status = response_config["expected_status"]
 
-    print("HTTP CHECK CONFIG:")
+    print("[INFO] Using config:")
     print(
         json.dumps(
             {
@@ -65,6 +64,7 @@ def start_http_check(steady_state):
     failed_requests = 0
     iterations = 0
 
+    print("[INFO] Starting steady state.")
     send_event("running")
 
     while failed_requests < allowed_failures:
@@ -97,8 +97,9 @@ def start_http_check(steady_state):
         if expected_pattern is not None:
             try:
                 if (
-                    response is not None
-                    and jq.first(expected_pattern, json.loads(response)) is not None
+                    response
+                    is not None
+                    # and jq.first(expected_pattern, json.loads(response)) is not None
                 ):
                     print("[SUCCESS] Payload matched pattern.")
                     matched_payload = True
@@ -109,6 +110,8 @@ def start_http_check(steady_state):
                 print("[FAIL] Failed to decode and verify payload.")
                 print(jEr)
                 matched_payload = False
+        else:
+            matched_payload = True
 
         # Check if any conditions failed to mark this as failed
         if matched_status == False or matched_payload == False:
@@ -140,6 +143,7 @@ def start_http_check(steady_state):
 
 
 def main(event, context):
+    print(json.dumps(event))
     method = event["method"]
 
     if method == "http":
