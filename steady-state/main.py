@@ -3,6 +3,7 @@ from time import sleep
 import urllib3
 import boto3
 import os
+import jmespath
 
 eventbridge_client = boto3.client("events")
 
@@ -43,8 +44,8 @@ def start_http_check(steady_state):
 
     if "failures" in response_config:
         allowed_failures = response_config["failures"]
-    if "jq" in response_config:
-        expected_pattern = response_config["jq"]
+    if "pattern" in response_config:
+        expected_pattern = response_config["pattern"]
     if "expected_status" in response_config:
         expected_status = response_config["expected_status"]
 
@@ -93,18 +94,18 @@ def start_http_check(steady_state):
         if r.status == expected_status:
             matched_status = True
 
-        # Compare payload to jq pattern
+        # Compare payload to pattern
         if expected_pattern is not None:
             try:
                 if (
-                    response
+                    response is not None
+                    and jmespath.search(expected_pattern, json.loads(response))
                     is not None
-                    # and jq.first(expected_pattern, json.loads(response)) is not None
                 ):
                     print("[SUCCESS] Payload matched pattern.")
                     matched_payload = True
                 else:
-                    print("[FAIL] Payload didn't match JQ.")
+                    print("[FAIL] Payload didn't match pattern.")
                     matched_payload = False
             except json.JSONDecodeError as jEr:
                 print("[FAIL] Failed to decode and verify payload.")
@@ -144,7 +145,7 @@ def start_http_check(steady_state):
 
 def main(event, context):
     print(json.dumps(event))
-    method = event["method"]
+    type = event["type"]
 
-    if method == "http":
+    if type == "http":
         start_http_check(event)
