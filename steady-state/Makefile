@@ -1,15 +1,25 @@
 deploy:
+	# Remove the old build every time
 	rm -rf ./build
-	pip install -r requirements.txt
 	rm -f build.zip
 	mkdir -p build
-	cp ./main.py ./build/main.py
-	# cp -rf ../modules-venv/lib/python3.9/site-packages/* build
+
+	# Install dependencies into build folder
 	pip install -r requirements.txt -t ./build
-	cd ./build; zip -r ../build.zip .
-	aws s3 cp ./build.zip s3://code.dev.firedrill.sh/modules/steady_state/ --acl public-read
+
+	# Copy app files to build folder
+	cp ./main.py ./build/main.py
+
+	# Zip the entire folder
+	cd ./build; zip -r ../latest.zip .
+
+	# Deploy to S3
+	aws s3 cp ./latest.zip s3://code.dev.firedrill.sh/modules/steady_state/ --acl public-read
+
+update: deploy
+	# Update the existing function with the latest code
 	aws lambda update-function-code \
 		--function-name  firedrill-steady-state-dev \
-		--zip-file fileb://build.zip
-docker:
-	docker build .
+		--zip-file fileb://latest.zip
+local:
+	./local.sh
